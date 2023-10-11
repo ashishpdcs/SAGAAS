@@ -39,11 +39,13 @@ const Login = () => {
 
     if (isValid) {
       try {
-        const response = await fetch('http://localhost:5000/login', {
+        localStorage.removeItem('jwtToken');
+        const token = localStorage.getItem('jwtToken');
+        const response = await fetch('http://localhost:5000/api/employees/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('jwtToken') || ''}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             Email: email,
@@ -52,22 +54,25 @@ const Login = () => {
         });
     
         if (response.status === 200) {
-          const { token } = await response.json();
-          localStorage.setItem('jwtToken', token);
+          const responseData = await response.json();
+          console.log('Response Data:', responseData);
+          console.log(responseData.token);
+          localStorage.setItem('jwtToken', responseData.token);
           console.log('Login successful');
-          navigate('/employee'); 
-        } else if (response.status === 401) {
+          navigate('/employee');
+        }else if (response.status === 401) {
           console.error('Invalid credentials');
         } else if (response.status === 500) {
           setRedirectToErrorPage(true);
         } else {
-          console.error('Error during login');
+          console.error('Error during login:', await response.json());
         }
       } catch (error) {
         console.error('Error during login:', error);
         setRedirectToErrorPage(true);
       }
     }
+    
     
   };
 

@@ -64,10 +64,12 @@ const EmployeeUser = () => {
 
         if (isValid) {
             try {
-                const response = await fetch('http://localhost:5000/addemployee', {
+                 const token = localStorage.getItem('jwtToken');
+                const response = await fetch('http://localhost:5000/api/employees/createEmployee', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
                     },
                     body: JSON.stringify({
                         FirstName: firstName,
@@ -82,6 +84,7 @@ const EmployeeUser = () => {
                     console.log('Employee added successfully');
                     navigate("/employee");
                 } else {
+                    console.log(response.status);
                     console.error('Error adding employee');
                 }
             } catch (error) {

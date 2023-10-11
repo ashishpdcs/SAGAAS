@@ -25,25 +25,29 @@ const Employee = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/employees/getallemployees' , {
+       const token = localStorage.getItem('jwtToken');
+      
+      const response = await axios.get('http://localhost:5000/api/employees/getallemployees', {
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwtToken') || ''}`,
         },
       });
-      console.log(response.status);
+  
       if (response.status === 200) {
-      setEmployees(response.data.employees);
+        setEmployees(response.data.employees);
       } else if (response.status === 401) {
         console.log(response.status);
-        return <Login/>;
-      }else if (response.status === 500) {
+        localStorage.removeItem('jwtToken');
+        console.log('Unauthorized. Redirecting to login.');
+      } else if (response.status === 500) {
         setRedirectToErrorPage(true);
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
     }
   };
+  
 
   useEffect(() => {
     fetchEmployees();
@@ -58,13 +62,14 @@ const Employee = () => {
   }
 
   //SEARCH API
-  const handleEdit = async (employeeId: number) => {
+  const handleSearch = async (employeeId: number) => {
     try {
+      const token = localStorage.getItem('jwtToken');
       const response = await axios.get('http://localhost:5000/api/employees/searchemployee', {
         params: { id: employeeId },
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwtToken') || ''}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -93,19 +98,26 @@ const Employee = () => {
     }
   
     try {
-      const response = await axios.put(`http://localhost:5000/api/employees/updateemployee/${selectedEmployee.Id}`, {
-        FirstName: selectedEmployee.FirstName,
-        LastName: selectedEmployee.LastName,
-        Email: selectedEmployee.Email,
-        Password: selectedEmployee.Password,
-        UserName: selectedEmployee.UserName,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwtToken') || ''}`,
+      const token = localStorage.getItem('jwtToken');
+      console.log("Token Completed get all fgs",token);
+      const response = await axios.put( `http://localhost:5000/api/employees/updateemployee/${selectedEmployee.Id}`,
+        {
+          FirstName: selectedEmployee.FirstName,
+          LastName: selectedEmployee.LastName,
+          Email: selectedEmployee.Email,
+          Password: selectedEmployee.Password,
+          UserName: selectedEmployee.UserName,
         },
-      });
-  
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`,
+          },
+        }
+      );
+      console.log("Response" ,response.status );
       if (response.status === 200) {
+        
         console.log('Record Updated');
         handleCloseEditModal();
         fetchEmployees();
@@ -120,23 +132,24 @@ const Employee = () => {
   //DELETE API
   const handleDelete = async (employeeId: number) => {
     try {
-      const response = await axios.delete(`http://localhost:5000/api/employees/deleteemployee/${employeeId}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwtToken') || ''}`,
-        },
-      });
-  
-      if (response.status === 200) {
-        console.log('Record Deleted');
-        fetchEmployees(); 
-      } else {
-        console.error('Error deleting record:', response.data.error);
-      }
+      const token = localStorage.getItem('jwtToken');
+        const response = await axios.delete(`http://localhost:5000/api/employees/deleteemployee/${employeeId}`, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        if (response.status === 200) {
+            console.log('Record Deleted');
+            fetchEmployees();
+        } else {
+            console.error('Error deleting record:', response.data.error);
+        }
     } catch (error) {
-      console.error('Error deleting record:', error);
+        console.error('Error deleting record:', error);
     }
-  };
+};
 
   return (
     <Container component="main" maxWidth="lg">
@@ -176,7 +189,7 @@ const Employee = () => {
                     variant="contained"
                     color="primary"
                     style={{ marginRight: '8px' }}
-                    onClick={() => handleEdit(employee.Id)}
+                    onClick={() => handleSearch(employee.Id)}
                     data-bs-toggle="modal" data-bs-target="#exampleModal"
                   >
                     Edit
@@ -203,7 +216,7 @@ const Employee = () => {
             </div>
             <div className="modal-body">
               {selectedEmployee && (
-                <form>
+                <div>
                   <TextField
                     label="First Name"
                     variant="outlined"
@@ -250,7 +263,8 @@ const Employee = () => {
                   >
                     Save Changes
                   </Button>
-                </form>
+                </div>
+                
               )}
             </div>
           </div>
