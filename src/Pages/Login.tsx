@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import { useNavigate  } from 'react-router-dom';
 import WrongPage from './WrongPage';
-
 
 const Login = () => {
   const [email, setEmail] = useState<string>('');
@@ -15,6 +14,13 @@ const Login = () => {
 
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      refreshAccessToken(refreshToken);
+    }
+  }, []);
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -42,25 +48,26 @@ const Login = () => {
         localStorage.removeItem('jwtToken');
         const token = localStorage.getItem('jwtToken');
         const response = await fetch('http://localhost:5000/api/employees/login', {
-          method: 'POST',
+        method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({
+          body: JSON.stringify({  
             Email: email,
             Password: password,
           }),
         });
+        console.log("Response" , response.status);
     
         if (response.status === 200) {
           const responseData = await response.json();
-          console.log('Response Data:', responseData);
-          console.log(responseData.token);
           localStorage.setItem('jwtToken', responseData.token);
+          localStorage.setItem('refreshToken', responseData.refreshToken);
           console.log('Login successful');
+          await refreshAccessToken(responseData.refreshToken);
           navigate('/employee');
-        }else if (response.status === 401) {
+        } else if (response.status === 401) {
           console.error('Invalid credentials');
         } else if (response.status === 500) {
           setRedirectToErrorPage(true);
@@ -72,10 +79,33 @@ const Login = () => {
         setRedirectToErrorPage(true);
       }
     }
-    
-    
   };
 
+  const refreshAccessToken = async (refreshToken:string) => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshResponse = await fetch('http://localhost:5000/api/employees/refresh-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refreshToken: refreshToken,
+        }),
+      });
+      if (refreshResponse.ok) {
+        const refreshedData = await refreshResponse.json();
+        localStorage.setItem('jwtToken', refreshedData.token);  
+        console.log('Access token refreshed successfully');
+      } else {
+        const errorResponse = await refreshResponse.json();
+        console.error('Error refreshing access token:', errorResponse);
+      }
+    } catch (error) {
+      console.error('Error refreshing access token:', error);
+    }
+  };
+  
   const isValidEmail = (value: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
